@@ -27,3 +27,14 @@ TOP_SCORES_COUNT = 3
 # Countdown constants
 COUNTDOWN_DURATION = 3.0  # seconds
 PREPARE_DISPLAY_TIME = 1.5  # seconds
+
+# Meteorite and star constants
+METEORITE_RADIUS = 15
+METEORITE_SPEED = 400
+METEORITE_SPAWN_RATE = 8.0  # seconds
+STAR_RADIUS = 12
+STAR_BLINK_RATE = 0.3  # seconds
+STAR_COLLECTION_DISTANCE = 35
+STAR_EXPLOSION_RADIUS = 1000  # Large enough to cover entire screen
+STAR_EXPLOSION_DURATION = 0.5  # seconds
+STAR_WHITE_FLASH_DURATION = 1.0  # seconds

@@ -10,6 +10,7 @@ class Player(CircleShape):
         self.rotation = 0
         self.shoot_timer = 0
         self.points = 0  # Track player's score
+        self.has_star_power = False  # Track if player has star power
 
     # in the player class
     def triangle(self):
@@ -42,6 +43,15 @@ class Player(CircleShape):
         """Collect a gold orb and add points"""
         self.points += POINTS_PER_ORB
         orb.kill()
+
+    def collect_star(self, star):
+        """Collect a star and activate star power"""
+        self.has_star_power = True
+        star.kill()
+
+    def use_star_power(self):
+        """Use star power and reset the flag"""
+        self.has_star_power = False
 
     def shoot(self):
         if self.shoot_timer > 0:
