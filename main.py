@@ -151,10 +151,12 @@ def main():
             meteorite_spawn_timer += dt
             if meteorite_spawn_timer >= METEORITE_SPAWN_RATE:
                 meteorite_spawn_timer = 0.0
-                new_meteorite = spawn_meteorite()
-                meteorites.add(new_meteorite)
-                updatable.add(new_meteorite)
-                drawable.add(new_meteorite)
+                # Only spawn meteorites if player doesn't have a star
+                if player.stars_collected == 0:
+                    new_meteorite = spawn_meteorite()
+                    meteorites.add(new_meteorite)
+                    updatable.add(new_meteorite)
+                    drawable.add(new_meteorite)
 
             # Check player collision with asteroids
             for asteroid in asteroids:
@@ -183,8 +185,9 @@ def main():
                 for meteorite in meteorites:
                     if meteorite.collides_with(shot):
                         shot.kill()
-                        # Create star from destroyed meteorite
+                        # Create blinking star from destroyed meteorite
                         new_star = meteorite.destroy()
+                        print(f"DEBUG: Created blinking star at {new_star.position}")
                         stars.add(new_star)
                         updatable.add(new_star)
                         drawable.add(new_star)
@@ -210,19 +213,23 @@ def main():
             # Check for star collection
             for star in stars:
                 if star.is_collected_by(player):
-                    # Store star position before killing it
-                    star_position = star.position.copy()
+                    print(f"DEBUG: Star collected by player")
                     player.collect_star(star)
-                    # Use star power immediately
+
+            # Check for E key to activate star power
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_e] and player.stars_collected > 0 and not utility.enabled:
+                if player.consume_star():
+                    # Activate star power
                     player.use_star_power()
                     
                     # Start explosion effect
                     explosion_timer = STAR_EXPLOSION_DURATION
-                    explosion_position = star_position
+                    explosion_position = player.position
                     
                     # Start white circle expansion effect
                     white_circle_timer = STAR_CIRCLE_EXPANSION_DURATION
-                    white_circle_position = star_position
+                    white_circle_position = player.position
                     
                     # VAPORIZE ALL asteroids on screen (no distance check needed)
                     exploded_asteroids = list(asteroids)  # Convert to list to avoid modification during iteration
@@ -303,6 +310,24 @@ def main():
         # Display current score during gameplay
         if game_state == 'playing':
             draw_text(screen, f'Score: {player.points}', 36, (255, 255, 255), 100, 30)
+            
+            # Display stars collected
+            if player.stars_collected > 0:
+                # Draw a solid yellow star icon
+                star_points = []
+                star_center = pygame.Vector2(50, 70)
+                star_radius = 15
+                for i in range(5):
+                    angle = i * 72 - 90  # Start from top
+                    outer_point = pygame.Vector2(0, -star_radius).rotate(angle)
+                    inner_point = pygame.Vector2(0, -star_radius * 0.4).rotate(angle + 36)
+                    star_points.extend([star_center + outer_point, star_center + inner_point])
+                
+                pygame.draw.polygon(screen, (255, 255, 0), star_points)
+                pygame.draw.polygon(screen, (255, 215, 0), star_points, 2)
+                
+                draw_text(screen, 'Press E to use star', 24, (255, 215, 0), 100, 100)
+            
             # Display high scores during gameplay
             high_score_manager.draw_high_scores(screen, SCREEN_WIDTH - 200, 30)
             

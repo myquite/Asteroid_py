@@ -27,8 +27,10 @@ class Meteorite(CircleShape):
             self.kill()
 
     def destroy(self):
-        """Called when meteorite is destroyed, returns a star"""
+        """Called when meteorite is destroyed, returns a blinking star"""
         from star import Star
         star = Star(self.position.x, self.position.y)
+        # Make the star start blinking
+        star.start_blink_animation()
         self.kill()
         return star 

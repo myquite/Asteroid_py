@@ -1,4 +1,5 @@
 import pygame
+import random
 from constants import *
 from star import Star
 from goldorb import GoldOrb
@@ -17,7 +18,7 @@ class UtilityCommands:
     def handle_key_press(self, key):
         """Handle utility key commands"""
         # Always handle T key for toggle, regardless of enabled state
-        if key == pygame.K_u:
+        if key == pygame.K_t:
             self.toggle_utility()
             return
             
@@ -26,9 +27,17 @@ class UtilityCommands:
             return
             
         if key == pygame.K_e:
-            self.trigger_star_effect()
+            # Check if player has a star to consume
+            player = self.game_objects['player']
+            if player.stars_collected > 0:
+                # Consume the star and trigger effect
+                if player.consume_star():
+                    self.trigger_star_effect()
+            else:
+                # No star available, trigger effect directly (utility mode)
+                self.trigger_star_effect()
         elif key == pygame.K_g:
-            self.spawn_gold_orb()
+            self.spawn_blinking_star()
         elif key == pygame.K_m:
             self.spawn_meteorite()
         elif key == pygame.K_a:
@@ -96,6 +105,25 @@ class UtilityCommands:
         self.game_objects['updatable'].add(orb)
         self.game_objects['drawable'].add(orb)
         
+    def spawn_blinking_star(self):
+        """G key - Spawn a blinking star at a random position on the screen"""
+        print("UTILITY: Spawning blinking star")
+        screen_width = pygame.display.get_surface().get_width()
+        screen_height = pygame.display.get_surface().get_height()
+        
+        # Generate a random position within the screen bounds
+        x = random.randint(0, screen_width - 1)
+        y = random.randint(0, screen_height - 1)
+        
+        # Create a star at the random position
+        blinking_star = Star(x, y)
+        # Start the blinking animation
+        blinking_star.start_blink_animation()
+        self.game_objects['stars'].add(blinking_star)
+        self.game_objects['updatable'].add(blinking_star)
+        self.game_objects['drawable'].add(blinking_star)
+        print(f"UTILITY: Blinking star spawned at ({x}, {y})")
+        
     def spawn_meteorite(self):
         """M key or 2 key - Spawn a meteorite at player position"""
         print("UTILITY: Spawning meteorite")
@@ -142,7 +170,7 @@ class UtilityCommands:
         print("\n=== UTILITY COMMANDS ===")
         print("T - Toggle utility commands (currently DISABLED)")
         print("E - Trigger star explosion effect")
-        print("G/1 - Spawn gold orb at player")
+        print("G - Spawn blinking star at random position")
         print("M/2 - Spawn meteorite at player")
         print("A/4 - Spawn asteroid at player")
         print("P/5 - Add 1000 points")
