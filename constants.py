@@ -18,3 +18,12 @@ SHOT_RADIUS = 5
 GOLD_ORB_RADIUS = 8
 GOLD_ORB_COLLECTION_DISTANCE = 30
 POINTS_PER_ORB = 100
+
+# High score constants
+HIGH_SCORE_FILE = "high_scores.txt"
+MAX_NAME_LENGTH = 15
+TOP_SCORES_COUNT = 3
+
+# Countdown constants
+COUNTDOWN_DURATION = 3.0  # seconds
+PREPARE_DISPLAY_TIME = 1.5  # seconds

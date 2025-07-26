@@ -7,6 +7,7 @@ from asteroid import Asteroid
 from asteroidfield import AsteroidField
 from shot import Shot
 from goldorb import GoldOrb
+from highscore import HighScore
 
 def init_game():
     updatable = pygame.sprite.Group()
@@ -36,8 +37,12 @@ def main():
     clock = pygame.time.Clock()  # Set the frame rate to 60 FPS
     dt = 0
     
-    game_state = 'playing'  # or 'gameover'
+    game_state = 'countdown'  # 'countdown', 'playing', 'gameover', 'highscore_input'
+    countdown_timer = 0.0
+    countdown_phase = 'prepare'  # 'prepare' or 'countdown'
+    
     updatable, drawable, asteroids, shots, orbs, asteroid_field, player = init_game()
+    high_score_manager = HighScore()
 
     while True:
         for event in pygame.event.get():
@@ -48,14 +53,31 @@ def main():
                 if event.key == pygame.K_r:
                     # Restart the game
                     updatable, drawable, asteroids, shots, orbs, asteroid_field, player = init_game()
-                    game_state = 'playing'
+                    game_state = 'countdown'
+                    countdown_timer = 0.0
+                    countdown_phase = 'prepare'
 
-        if game_state == 'playing':
+        if game_state == 'countdown':
+            countdown_timer += dt
+            
+            if countdown_phase == 'prepare':
+                if countdown_timer >= PREPARE_DISPLAY_TIME:
+                    countdown_phase = 'countdown'
+                    countdown_timer = 0.0
+            elif countdown_phase == 'countdown':
+                if countdown_timer >= COUNTDOWN_DURATION:
+                    game_state = 'playing'
+                    countdown_timer = 0.0
+
+        elif game_state == 'playing':
             updatable.update(dt)
 
             for asteroid in asteroids:
                 if asteroid.collides_with(player):
                     game_state = 'gameover'
+                    # Check if this is a high score
+                    if high_score_manager.is_high_score(player.points):
+                        game_state = 'highscore_input'
                     break
                 for shot in shots:
                     if asteroid.collides_with(shot):
@@ -73,18 +95,48 @@ def main():
                 if orb.is_collected_by(player):
                     player.collect_orb(orb)
 
+        elif game_state == 'highscore_input':
+            # Get player name for high score
+            player_name = high_score_manager.get_name_input(screen, player.points)
+            if player_name:
+                high_score_manager.add_score(player_name, player.points)
+            game_state = 'gameover'
+
         screen.fill((0, 0, 0))
 
-        for obj in drawable:
-            obj.draw(screen)
+        # Draw game objects during countdown and playing states
+        if game_state in ['countdown', 'playing']:
+            for obj in drawable:
+                obj.draw(screen)
 
-        # Display score
-        draw_text(screen, f'Score: {player.points}', 36, (255, 255, 255), 100, 30)
+        # Draw countdown screen
+        if game_state == 'countdown':
+            if countdown_phase == 'prepare':
+                draw_text(screen, 'BE PREPARED', 72, (255, 215, 0), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+            elif countdown_phase == 'countdown':
+                remaining_time = COUNTDOWN_DURATION - countdown_timer
+                countdown_number = int(remaining_time) + 1
+                if countdown_number > 0:
+                    draw_text(screen, str(countdown_number), 120, (255, 255, 255), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
+        # Display current score during gameplay
+        if game_state == 'playing':
+            draw_text(screen, f'Score: {player.points}', 36, (255, 255, 255), 100, 30)
+            # Display high scores during gameplay
+            high_score_manager.draw_high_scores(screen, SCREEN_WIDTH - 200, 30)
 
         if game_state == 'gameover':
-            draw_text(screen, 'GAME OVER', 100, (255, 0, 0), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50)
-            draw_text(screen, f'Final Score: {player.points}', 60, (255, 255, 255), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-            draw_text(screen, 'Press R to Restart', 50, (255, 255, 255), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 60)
+            draw_text(screen, 'GAME OVER', 100, (255, 0, 0), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 100)
+            draw_text(screen, f'Final Score: {player.points}', 60, (255, 255, 255), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 20)
+            
+            # Show if it's a high score
+            if high_score_manager.is_high_score(player.points):
+                draw_text(screen, 'NEW HIGH SCORE!', 48, (255, 215, 0), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20)
+            
+            # Display high scores
+            high_score_manager.draw_high_scores(screen, SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 80)
+            
+            draw_text(screen, 'Press R to Restart', 50, (255, 255, 255), SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
 
         pygame.display.flip()
 
