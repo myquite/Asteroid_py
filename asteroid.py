@@ -15,10 +15,18 @@ class Asteroid(CircleShape):
         self.position += self.velocity * dt
 
     def split(self):
-        self.kill()
-
+        """Split the asteroid and return gold orbs if it's a small asteroid"""
+        orbs_to_spawn = []
+        
+        # If this is a small asteroid (minimum size), drop a gold orb
         if self.radius <= ASTEROID_MIN_RADIUS:
-            return
+            from goldorb import GoldOrb
+            orb = GoldOrb(self.position.x, self.position.y)
+            orbs_to_spawn.append(orb)
+            self.kill()
+            return orbs_to_spawn
+
+        self.kill()
 
         # randomize the angle of the split
         random_angle = random.uniform(20, 50)
@@ -31,3 +39,5 @@ class Asteroid(CircleShape):
         asteroid.velocity = a * 1.2
         asteroid = Asteroid(self.position.x, self.position.y, new_radius)
         asteroid.velocity = b * 1.2
+        
+        return orbs_to_spawn

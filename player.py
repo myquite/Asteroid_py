@@ -9,6 +9,7 @@ class Player(CircleShape):
         super().__init__(x, y, PLAYER_RADIUS)
         self.rotation = 0
         self.shoot_timer = 0
+        self.points = 0  # Track player's score
 
     # in the player class
     def triangle(self):
@@ -36,6 +37,11 @@ class Player(CircleShape):
             self.move(-dt)
         if keys[pygame.K_SPACE]:
             self.shoot()
+
+    def collect_orb(self, orb):
+        """Collect a gold orb and add points"""
+        self.points += POINTS_PER_ORB
+        orb.kill()
 
     def shoot(self):
         if self.shoot_timer > 0:
