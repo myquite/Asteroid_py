@@ -41,3 +41,27 @@ class Asteroid(CircleShape):
         asteroid.velocity = b * 1.2
         
         return orbs_to_spawn
+
+    def destroy_for_orbs(self):
+        """Destroy asteroid and return orbs based on size (for star effect)"""
+        orbs_to_spawn = []
+        from goldorb import GoldOrb
+        
+        # Calculate how many orbs based on asteroid size
+        if self.radius <= ASTEROID_MIN_RADIUS:
+            # Small asteroid = 1 orb
+            orb_count = 1
+        elif self.radius <= ASTEROID_MIN_RADIUS * 2:
+            # Medium asteroid = 3 orbs
+            orb_count = 3
+        else:
+            # Large asteroid = 7 orbs
+            orb_count = 7
+        
+        # Create the orbs
+        for _ in range(orb_count):
+            orb = GoldOrb(self.position.x, self.position.y)
+            orbs_to_spawn.append(orb)
+        
+        self.kill()
+        return orbs_to_spawn

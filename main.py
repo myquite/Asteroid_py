@@ -10,6 +10,7 @@ from goldorb import GoldOrb
 from meteorite import Meteorite
 from star import Star
 from highscore import HighScore
+from utility_commands import UtilityCommands
 
 def init_game():
     updatable = pygame.sprite.Group()
@@ -69,18 +70,37 @@ def main():
     meteorite_spawn_timer = 0.0
     explosion_timer = 0.0
     explosion_position = None
-    white_flash_timer = 0.0
+    white_circle_timer = 0.0
+    white_circle_position = None
     
     updatable, drawable, asteroids, shots, orbs, meteorites, stars, asteroid_field, player = init_game()
     high_score_manager = HighScore()
+    
+    # Initialize utility commands
+    game_objects = {
+        'player': player,
+        'asteroids': asteroids,
+        'orbs': orbs,
+        'meteorites': meteorites,
+        'stars': stars,
+        'updatable': updatable,
+        'drawable': drawable
+    }
+    utility = UtilityCommands(game_objects)
+    utility.print_help()  # Print available commands on startup
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
-            if game_state == 'gameover' and event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
+            if event.type == pygame.KEYDOWN:
+                # Handle utility commands (only during playing state)
+                if game_state == 'playing':
+                    utility.handle_key_press(event.key)
+                
+                # Handle game restart
+                if game_state == 'gameover' and event.key == pygame.K_r:
                     # Restart the game
                     updatable, drawable, asteroids, shots, orbs, meteorites, stars, asteroid_field, player = init_game()
                     game_state = 'countdown'
@@ -89,7 +109,20 @@ def main():
                     meteorite_spawn_timer = 0.0
                     explosion_timer = 0.0
                     explosion_position = None
-                    white_flash_timer = 0.0
+                    white_circle_timer = 0.0
+                    white_circle_position = None
+                    
+                    # Reinitialize utility commands with new game objects
+                    game_objects = {
+                        'player': player,
+                        'asteroids': asteroids,
+                        'orbs': orbs,
+                        'meteorites': meteorites,
+                        'stars': stars,
+                        'updatable': updatable,
+                        'drawable': drawable
+                    }
+                    utility = UtilityCommands(game_objects)
 
         if game_state == 'countdown':
             countdown_timer += dt
@@ -110,9 +143,9 @@ def main():
             if explosion_timer > 0:
                 explosion_timer -= dt
             
-            # Update white flash effect
-            if white_flash_timer > 0:
-                white_flash_timer -= dt
+            # Update white circle expansion effect
+            if white_circle_timer > 0:
+                white_circle_timer -= dt
             
             # Spawn meteorites
             meteorite_spawn_timer += dt
@@ -127,8 +160,8 @@ def main():
             for asteroid in asteroids:
                 if asteroid.collides_with(player):
                     game_state = 'gameover'
-                    # Check if this is a high score
-                    if high_score_manager.is_high_score(player.points):
+                    # Check if this is a high score (but not in utility mode)
+                    if not utility.is_utility_mode_active() and high_score_manager.is_high_score(player.points):
                         game_state = 'highscore_input'
                     break
 
@@ -174,15 +207,16 @@ def main():
                     explosion_timer = STAR_EXPLOSION_DURATION
                     explosion_position = star_position
                     
-                    # Start white flash effect
-                    white_flash_timer = STAR_WHITE_FLASH_DURATION
+                    # Start white circle expansion effect
+                    white_circle_timer = STAR_CIRCLE_EXPANSION_DURATION
+                    white_circle_position = star_position
                     
                     # VAPORIZE ALL asteroids on screen (no distance check needed)
                     exploded_asteroids = list(asteroids)  # Convert to list to avoid modification during iteration
                     
                     for asteroid in exploded_asteroids:
-                        # Create orbs from exploded asteroids
-                        new_orbs = asteroid.split()
+                        # Create orbs from exploded asteroids using the new method
+                        new_orbs = asteroid.destroy_for_orbs()
                         if new_orbs:
                             for orb in new_orbs:
                                 orbs.add(orb)
@@ -202,14 +236,26 @@ def main():
                 high_score_manager.add_score(player_name, player.points)
             game_state = 'gameover'
 
-        # Draw white flash effect first (if active)
-        if white_flash_timer > 0:
-            # Calculate flash intensity (fade from white to transparent)
-            flash_alpha = int((white_flash_timer / STAR_WHITE_FLASH_DURATION) * 255)
-            flash_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-            flash_surface.fill((255, 255, 255))
-            flash_surface.set_alpha(flash_alpha)
-            screen.blit(flash_surface, (0, 0))
+        # Draw white circle expansion effect
+        if white_circle_timer > 0 and white_circle_position:
+            # Calculate circle radius based on time elapsed
+            progress = 1.0 - (white_circle_timer / STAR_CIRCLE_EXPANSION_DURATION)
+            
+            # Calculate the maximum radius needed to cover the entire screen
+            max_radius = max(
+                white_circle_position.distance_to(pygame.Vector2(0, 0)),
+                white_circle_position.distance_to(pygame.Vector2(SCREEN_WIDTH, 0)),
+                white_circle_position.distance_to(pygame.Vector2(0, SCREEN_HEIGHT)),
+                white_circle_position.distance_to(pygame.Vector2(SCREEN_WIDTH, SCREEN_HEIGHT))
+            )
+            
+            # Current radius based on progress
+            current_radius = max_radius * progress
+            
+            # Create a surface for the expanding circle
+            circle_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            pygame.draw.circle(circle_surface, (255, 255, 255, 255), white_circle_position, current_radius)
+            screen.blit(circle_surface, (0, 0))
         else:
             screen.fill((0, 0, 0))
 
@@ -218,8 +264,8 @@ def main():
             for obj in drawable:
                 obj.draw(screen)
 
-        # Draw explosion effect (only if not in white flash)
-        if explosion_timer > 0 and explosion_position and white_flash_timer <= 0:
+        # Draw explosion effect (only if not in white circle effect)
+        if explosion_timer > 0 and explosion_position and white_circle_timer <= 0:
             alpha = int((explosion_timer / STAR_EXPLOSION_DURATION) * 255)
             # Create a surface for the explosion effect
             explosion_surface = pygame.Surface((STAR_EXPLOSION_RADIUS * 2, STAR_EXPLOSION_RADIUS * 2), pygame.SRCALPHA)
@@ -241,6 +287,10 @@ def main():
             draw_text(screen, f'Score: {player.points}', 36, (255, 255, 255), 100, 30)
             # Display high scores during gameplay
             high_score_manager.draw_high_scores(screen, SCREEN_WIDTH - 200, 30)
+            
+            # Display utility status only when enabled
+            if utility.enabled:
+                draw_text(screen, 'UTILITY: ENABLED', 24, (0, 255, 0), 100, SCREEN_HEIGHT - 30)
 
         if game_state == 'gameover':
             draw_text(screen, 'GAME OVER', 100, (255, 0, 0), SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 100)
