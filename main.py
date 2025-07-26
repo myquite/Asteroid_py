@@ -191,8 +191,21 @@ def main():
 
             # Check for orb collection
             for orb in orbs:
-                if orb.is_collected_by(player):
+                if orb.animation_state == 'normal' and orb.is_collected_by(player):
                     player.collect_orb(orb)
+                elif orb.animation_state == 'pulling' and orb.animation_timer >= ORB_PULL_DURATION:
+                    # Orb has completed pull animation, add points
+                    player.points += POINTS_PER_ORB
+                elif orb.animation_state == 'blinking' and orb.animation_timer >= ORB_BLINK_DURATION:
+                    # Orb has finished blinking, set it to pull to player
+                    orb.set_pull_target(player.position)
+                elif orb.animation_state == 'pulling' and not orb.target_position:
+                    # If an orb is in pulling state but has no target, set it
+                    orb.set_pull_target(player.position)
+                elif orb.animation_state == 'pulling' and not orb.scored:
+                    # Orb is pulling and hasn't been scored yet, award points
+                    player.points += POINTS_PER_ORB
+                    orb.scored = True
 
             # Check for star collection
             for star in stars:
@@ -219,15 +232,20 @@ def main():
                         new_orbs = asteroid.destroy_for_orbs()
                         if new_orbs:
                             for orb in new_orbs:
+                                # Start the orb with blink animation
+                                orb.start_blink_animation()
                                 orbs.add(orb)
                                 updatable.add(orb)
                                 drawable.add(orb)
                     
-                    # ABSORB ALL orbs on screen (no distance check needed)
-                    absorbed_orbs = list(orbs)  # Convert to list to avoid modification during iteration
-                    
-                    for orb in absorbed_orbs:
-                        player.collect_orb(orb)
+                    # Start pull animation for ALL orbs (both existing and newly created)
+                    all_orbs = list(orbs)
+                    for orb in all_orbs:
+                        if orb.animation_state == 'normal':
+                            orb.start_pull_animation(player.position)
+                        elif orb.animation_state == 'blinking':
+                            # For blinking orbs, set the target but keep them blinking
+                            orb.set_pull_target(player.position)
 
         elif game_state == 'highscore_input':
             # Get player name for high score

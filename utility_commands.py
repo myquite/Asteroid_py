@@ -70,16 +70,22 @@ class UtilityCommands:
             total_orbs_created += len(new_orbs)
             if new_orbs:
                 for orb in new_orbs:
+                    # Start the orb with blink animation
+                    orb.start_blink_animation()
                     self.game_objects['orbs'].add(orb)
                     self.game_objects['updatable'].add(orb)
                     self.game_objects['drawable'].add(orb)
         
-        # Absorb all orbs (including newly created ones)
-        absorbed_orbs = list(self.game_objects['orbs'])
-        for orb in absorbed_orbs:
-            player.collect_orb(orb)
+        # Start pull animation for ALL orbs (both existing and newly created)
+        all_orbs = list(self.game_objects['orbs'])
+        for orb in all_orbs:
+            if orb.animation_state == 'normal':
+                orb.start_pull_animation(player.position)
+            elif orb.animation_state == 'blinking':
+                # For blinking orbs, set the target but keep them blinking
+                orb.set_pull_target(player.position)
             
-        print(f"UTILITY: Destroyed {len(exploded_asteroids)} asteroids, created {total_orbs_created} orbs, collected {len(absorbed_orbs)} total orbs")
+        print(f"UTILITY: Destroyed {len(exploded_asteroids)} asteroids, created {total_orbs_created} orbs")
         
     def spawn_gold_orb(self):
         """G key or 1 key - Spawn a gold orb at player position"""
