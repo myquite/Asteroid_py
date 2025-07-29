@@ -253,6 +253,8 @@ def main():
                         elif orb.animation_state == 'blinking':
                             # For blinking orbs, set the target but keep them blinking
                             orb.set_pull_target(player.position)
+                    
+                    print(f"DEBUG: Destroyed {len(exploded_asteroids)} asteroids, created orbs")
 
         elif game_state == 'highscore_input':
             # Get player name for high score
@@ -261,7 +263,15 @@ def main():
                 high_score_manager.add_score(player_name, player.points)
             game_state = 'gameover'
 
-        # Draw white circle expansion effect
+        # Fill background first
+        screen.fill((0, 0, 0))
+
+        # Draw game objects during countdown and playing states
+        if game_state in ['countdown', 'playing']:
+            for obj in drawable:
+                obj.draw(screen)
+
+        # Draw white circle expansion effect (highest priority)
         if white_circle_timer > 0 and white_circle_position:
             # Calculate circle radius based on time elapsed
             progress = 1.0 - (white_circle_timer / STAR_CIRCLE_EXPANSION_DURATION)
@@ -281,16 +291,9 @@ def main():
             circle_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
             pygame.draw.circle(circle_surface, (255, 255, 255, 255), white_circle_position, current_radius)
             screen.blit(circle_surface, (0, 0))
-        else:
-            screen.fill((0, 0, 0))
 
-        # Draw game objects during countdown and playing states
-        if game_state in ['countdown', 'playing']:
-            for obj in drawable:
-                obj.draw(screen)
-
-        # Draw explosion effect (only if not in white circle effect)
-        if explosion_timer > 0 and explosion_position and white_circle_timer <= 0:
+        # Draw explosion effect (only if circle expansion is done)
+        elif explosion_timer > 0 and explosion_position:
             alpha = int((explosion_timer / STAR_EXPLOSION_DURATION) * 255)
             # Create a surface for the explosion effect
             explosion_surface = pygame.Surface((STAR_EXPLOSION_RADIUS * 2, STAR_EXPLOSION_RADIUS * 2), pygame.SRCALPHA)
